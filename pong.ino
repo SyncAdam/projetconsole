@@ -1,7 +1,7 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1331.h>
+#include <Adafruit_SSD1331.h>// à changer le type d'écran
 
 #define UP_BUTTON 2
 #define DOWN_BUTTON 3
