@@ -24,7 +24,7 @@
 #define bottomBoundary 300
 #define alienHStep 5
 #define alienVStep 5
-#define collisionUpdateTime 50
+#define collisionUpdateSpeed 50
 
 //Space invaders
 
@@ -453,7 +453,7 @@ void SI(Adafruit_ILI9341 screen)
 
       drawSpaceShip(screen, ship);
 
-      // Check if it's time to update the position
+      //Check if it's time to update the position
       currentT = millis();
       if (currentT - shipUpdate >= shipUpdateSpeed)
       {
@@ -548,7 +548,7 @@ void SI(Adafruit_ILI9341 screen)
       }
 
       //Check for collisions between aliens projectiles and the spaceShip
-      if(currentT - collisionUpdate >= collisionUpdateTime)
+      if(currentT - collisionUpdate >= collisionUpdateSpeed)
       {
         if(debugging) printText("CollisionUpdating", screen);
         checkCollisions(ship, projectiles, &ptrindex, aliens, daliens, &aliensNumber, screen, false);

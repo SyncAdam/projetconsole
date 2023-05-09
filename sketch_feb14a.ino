@@ -2,7 +2,7 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
 #include "spaceinvaders.h"
-//#include "pong.h"
+#include "pong.h"
 
 #define TFT_DC 9
 #define TFT_CS 10
@@ -202,7 +202,7 @@ void loop()
       SI(screen);
       break;
     case 3:
-      //pong();
+      pong(screen);
       break;
     default:
       break;
