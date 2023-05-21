@@ -13,8 +13,10 @@
 #define BACK 5
 #define SCREENHEIGHT 320
 #define SCREENWIDTH 240
+#define lastWonUpdateSpeed 3000
+#define lastScoreUpdateSpeed 500
 
-#define BALLUPDATESPEED 600
+#define BALLUPDATESPEED 40  
 #define PADDLEUPDATESPEED 50
 
 
@@ -24,8 +26,8 @@
 #define PADDLE_HEIGHT 40
 
 // Vitesse de la balle et des raquettes
-#define BALL_SPEED 1
-#define PADDLE_SPEED 1
+#define BALL_SPEED 4
+#define PADDLE_SPEED 7
 
 // Position de départ de la balle
 int ballX, ballY;
@@ -39,6 +41,15 @@ int paddle1DY, paddle2DY;
 // Scores des joueurs
 int player1Score = 0, player2Score = 0;
 
+void printGameOver(Adafruit_ILI9341 screen)
+{
+  screen.fillScreen(ILI9341_BLACK);
+  screen.setCursor(40, 140);
+  screen.setTextSize(3);
+  screen.setTextColor(ILI9341_RED);
+  screen.print("GAME OVER");
+  delay(2000);
+}
 
 void initialise(Adafruit_ILI9341 screen)
 {
@@ -74,8 +85,6 @@ void resetBall(Adafruit_ILI9341 screen) {
   // Donne une vitesse aléatoire à la balle
   ballVelocityX = random(0, 2) == 0 ? BALL_SPEED : -BALL_SPEED;
   ballVelocityY = random(0, 2) == 0 ? BALL_SPEED : -BALL_SPEED;
-
-  delay(2000);
 
   updateScore(screen); // Met à jour le score
 }
@@ -122,7 +131,7 @@ void undrawBall(Adafruit_ILI9341 screen)
   screen.fillRect(ballX, ballY, BALL_SIZE, BALL_SIZE, ILI9341_BLACK);
 }
 
-void checkCollisions(bool gameOver, Adafruit_ILI9341 screen) {
+void checkCollisions(bool* gameOver, Adafruit_ILI9341 screen, bool *noBall, unsigned long *lastWonUpdateTime) {
   // Vérifie s'il y a collision entre la balle et le bord supérieur ou inférieur de l'écran
   if (ballY <= 0 || ballY >= SCREENHEIGHT - BALL_SIZE) {
     ballVelocityY = -ballVelocityY;
@@ -137,19 +146,33 @@ void checkCollisions(bool gameOver, Adafruit_ILI9341 screen) {
   }
 
   // Vérifie si la balle est sortie de l'écran
-  if (ballX <= 0) {
-
+  if (ballX <= -10) {
     player2Score++;
-    if(player2Score > 10) gameOver = true;
+    if(player2Score > 10)
+    {
+      printGameOver(screen);
+      player1Score = 0;
+      player2Score = 0;
+      *gameOver = true;
+    }
     undrawBall(screen);
-    resetBall(screen);
+    *noBall = true;
+    *lastWonUpdateTime = millis();
   }
-  else if (ballX >= SCREENWIDTH - BALL_SIZE) {
+  else if (ballX >= SCREENWIDTH) {
     player1Score++;
-    if(player1Score > 10) gameOver = true;
+    if(player1Score > 10){
+      printGameOver(screen);
+      player1Score = 0;
+      player2Score = 0;
+      *gameOver = true;
+    } 
     undrawBall(screen);
-    resetBall(screen);
+    *noBall = true;
+    *lastWonUpdateTime = millis();
   }
+    
+  
 }
 
 void drawPaddles(Adafruit_ILI9341 screen) {
@@ -170,33 +193,53 @@ void pong(Adafruit_ILI9341 screen) {
   unsigned long ballUpdateTime = 0;
   unsigned long paddleUpdateTime = 0;
   unsigned long collisionUpdateTime = 0;
+  unsigned long lastWonUpdateTime = 0;
+  unsigned long lastScoreUpdateTime = 0;
 
-  unsigned long currentT = millis();
+  unsigned long currentTime = millis() + 3000;
 
   updateScore(screen);
 
-  while(!gameOver)
+  bool noBall = true;
+
+  while(!gameOver &&!digitalRead(5))
   {
 
-    if(currentT - ballUpdateTime >= BALLUPDATESPEED)
+    if(currentTime - lastWonUpdateTime >= lastWonUpdateSpeed && noBall)
+    {
+      resetBall(screen);
+      noBall = false;
+      lastWonUpdateTime = millis();
+    }
+
+    if(currentTime - ballUpdateTime >= BALLUPDATESPEED)
     {
       moveBall(); // Déplace la balle
       drawBall(screen);
       ballUpdateTime = millis();
     }
 
-    if(currentT - paddleUpdateTime >= PADDLEUPDATESPEED)
+    if(currentTime - paddleUpdateTime >= PADDLEUPDATESPEED)
     {
       movePaddles(); // Déplace les raquettes
       drawPaddles(screen);
       paddleUpdateTime = millis();
     }
 
-    if(currentT - collisionUpdateTime >= BALLUPDATESPEED)
+    if(currentTime - collisionUpdateTime >= BALLUPDATESPEED && !noBall)
     {
-      checkCollisions(gameOver, screen); // Vérifie s'il y a collision entre la balle et les bords ou les raquettes
+      checkCollisions(&gameOver, screen, &noBall, &lastWonUpdateTime); // Vérifie s'il y a collision entre la balle et les bords ou les raquettes
       collisionUpdateTime = millis();
     }
 
+    if(currentTime - lastScoreUpdateTime >= lastScoreUpdateSpeed)
+    {
+      updateScore(screen);
+      lastScoreUpdateTime = millis();
+    }
+
+    currentTime = millis();
+
   }
+    
 }

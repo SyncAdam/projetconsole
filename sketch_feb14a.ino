@@ -95,6 +95,7 @@ void undrawMenuRect(MenuText t)
 //Menu texts
 void createMenuElements(MenuText t[])
 {
+  /*
   t[0].x = 93;
   t[0].y = 140;
   t[0].color = ILI9341_BLUE;
@@ -105,16 +106,17 @@ void createMenuElements(MenuText t[])
   t[1].y = 170;
   t[1].color = ILI9341_BLUE;
   t[1].size = 2;
-  t[1].text = "Dino";
+  t[1].text = "Dino";ű
+  */
 
   t[2].x = 40;
-  t[2].y = 200;
+  t[2].y = 100;
   t[2].color = ILI9341_BLUE;
   t[2].size = 2;
   t[2].text = "Space Invaders";
 
   t[3].x = 100;
-  t[3].y = 230;
+  t[3].y = 130;
   t[3].color = ILI9341_BLUE;
   t[3].size = 2;
   t[3].text = "Pong";
@@ -125,7 +127,7 @@ void createMenuElements(MenuText t[])
 //(Maybe do a dynamic function for this for expandability)
 void printMenuElements(MenuText t[])
 {
-  for(int i = 0; i < 4; i++)
+  for(int i = 2; i < 4; i++)
   {
     screen.setTextColor(t[i].color);
     screen.setCursor(t[i].x, t[i].y);
@@ -139,7 +141,7 @@ int mainMenu()
 {
   int mybool = true;
   int selected = 0;  //selector index
-  int hoverindex = 0;
+  int hoverindex = 2;
   int dhoverindex = hoverindex;
 
   //Erase screen
@@ -167,14 +169,14 @@ int mainMenu()
     if(digitalRead(DOWN))
     {
       hoverindex++;
-      if(hoverindex == 4) hoverindex = 0;
+      if(hoverindex == 4) hoverindex = 2;
       undrawMenuRect(Texts[dhoverindex]);
       drawMenuRect(Texts[hoverindex]);
       delay(250);
     } 
     else if(digitalRead(UP)){
       hoverindex--;
-      if(hoverindex < 0) hoverindex = 3;
+      if(hoverindex < 2) hoverindex = 3;
       undrawMenuRect(Texts[dhoverindex]);
       drawMenuRect(Texts[hoverindex]);
       delay(150);

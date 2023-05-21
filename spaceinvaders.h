@@ -19,7 +19,7 @@
 #define shootUpdateSpeed 600
 #define alienShootUpdateSpeed 1200
 #define bulletUpdateSpeed 50
-#define collisionUpdateTime 50          //For some reason I changed the name from speed to time
+#define collisionUpdateSpeed 50          //For some reason I changed the name from speed to time
 #define alienBurstUpdateTime 100        //I dont know why, it could lead to confusion later
 #define alienQuickUpdateTime 200
 #define bulletSpeed 10
@@ -31,8 +31,9 @@
 #define topBoundary 0
 #define bottomBoundary 320              
 #define alienHStep 5                    //aliens horizontal and vertical step size in pixels
-#define alienVStep 5
-
+#define alienVStep 5 
+#define nAliens 55
+ 
 
 //Defining 3 structs as types SpaceShip, Projectile and Aliens
 //These are the 3 main objects in the game
@@ -81,7 +82,7 @@ void printText(String text, Adafruit_ILI9341 screen)
 
 void printGameOverScreen(Adafruit_ILI9341 screen)
 {
-  screen.fillRect(0, 0, 230, 340, ILI9341_BLACK);
+  screen.fillScreen(ILI9341_BLACK);
   screen.setCursor(50, 150);
   screen.setTextSize(3);
   screen.setTextColor(ILI9341_RED);
@@ -92,10 +93,11 @@ void printGameOverScreen(Adafruit_ILI9341 screen)
 void printLives(SpaceShip * ship, Adafruit_ILI9341 screen)
 {
   screen.fillRect(150, 0, 120, 10, ILI9341_BLACK);
-  screen.setCursor(150, 0);
+
+  screen.setCursor(180, 0);
   screen.setTextSize(2);
   screen.setTextColor(ILI9341_WHITE);
-  screen.print("Lives:");
+  screen.print("HP:");
   screen.print(ship->lives);
 }
 
@@ -103,6 +105,8 @@ void printLives(SpaceShip * ship, Adafruit_ILI9341 screen)
 void refreshScore(int score, Adafruit_ILI9341 screen)
 {
   screen.setTextSize(2);
+  screen.setCursor(0, 0);
+  screen.print("SCORE :");
   screen.fillRect(90, 0, 60, 14, ILI9341_BLACK);
   screen.setCursor(90, 0);
   screen.print(score);
@@ -214,19 +218,19 @@ void printProjectiles(Projectile **ps, int index, Projectile **aps, int aindex, 
 {
   for(int i = 0; i < index; i++)
   {
-    screen.fillRect(ps[i]->x, ps[i]->dy, projectilew, projectileh, ILI9341_BLACK);
+    if(ps[i]!= NULL) screen.fillRect(ps[i]->x, ps[i]->dy, projectilew, projectileh, ILI9341_BLACK);
   }
   for(int i = 0; i < index; i++)
   {
-    screen.fillRect(ps[i]->x, ps[i]->y, projectilew, projectileh, ps[i]->color);
+    if(ps[i]!= NULL) screen.fillRect(ps[i]->x, ps[i]->y, projectilew, projectileh, ps[i]->color);
   }
   for(int i = 0; i < aindex; i++)
   {
-    screen.fillRect(aps[i]->x, aps[i]->dy, projectilew, projectileh, ILI9341_BLACK);
+    if(ps[i]!= NULL) screen.fillRect(aps[i]->x, aps[i]->dy, projectilew, projectileh, ILI9341_BLACK);
   }
   for(int i = 0; i < aindex; i++)
   {
-    screen.fillRect(aps[i]->x, aps[i]->y, projectilew, projectileh, aps[i]->color);
+    if(ps[i]!= NULL) screen.fillRect(aps[i]->x, aps[i]->y, projectilew, projectileh, aps[i]->color);
   }
 }
 
@@ -252,19 +256,22 @@ void moveProjectiles(Projectile **ps, int *index, Projectile **aps, int* aindex)
 {                              //ps for player projectiles and aps for alien projectiles
     for(int i = 0; i < *index; i++)
     {
-      ps[i]->dy = ps[i]->y;
-      if(ps[i]->y < topBoundary)            //if goes offscreen
+      if(ps[i] != NULL)
       {
-        delete(ps[i]);                      //pointer deleted
-        for(int j = i; j < *index; j++)
+        ps[i]->dy = ps[i]->y;
+        if(ps[i]->y < topBoundary)            //if goes offscreen
         {
-          ps[j] = ps[j+1];                  //array shifted
+          delete(ps[i]);                      //pointer deleted
+          for(int j = i; j < *index; j++)
+          {
+            ps[j] = ps[j+1];                  //array shifted
+          }
+          (*index)--;                         //Never forget the paranthesis - index decremented
+        }  
+        else
+        {
+          ps[i]->y -= bulletSpeed;            //bullet moved up
         }
-        (*index)--;                         //Never forget the paranthesis - index decremented
-      }  
-      else
-      {
-        ps[i]->y -= bulletSpeed;            //bullet moved up
       }
     }
 
@@ -292,7 +299,10 @@ void moveAliens(Alien **aliens, int num, bool *movingRight)
   bool movedown = false;
   for(int i = 0; i < num; i++)
   {
-    if(aliens[i]->x + alienHStep >= rightBoundary && *movingRight || aliens[i]->x - alienHStep <= leftBoundary && !*movingRight) movedown = true;
+    if(aliens[i] != NULL)
+    {
+      if(aliens[i]->x + alienHStep >= rightBoundary && *movingRight || aliens[i]->x - alienHStep <= leftBoundary && !*movingRight) movedown = true;
+    }
   }
   if(movedown) *movingRight = !*movingRight;
   for(int i = 0; i < num; i++)
@@ -350,13 +360,6 @@ void generateAliens(Alien **aliens, int aliensNumber)
 
 void checkCollisions(SpaceShip * ship, Projectile ** ps, int *pind, Projectile **aps, int *apind, Alien ** aliens, bool daliens[6][8][12], int *aliensNumber, Adafruit_ILI9341 screen, bool debug,unsigned int * score, bool * gameover)
 { 
-  short* delProj = NULL;
-  short* delAlien = NULL;
-  short* delAProj = NULL;
-  short temp1;
-  short temp2;
-  short temp3;
-
   //First check for projectile and alien collisions
   if(ps != NULL && aliens != NULL)
   { 
@@ -383,12 +386,13 @@ void checkCollisions(SpaceShip * ship, Projectile ** ps, int *pind, Projectile *
             printText("Collision detected!", screen);
             delay(1000);
           }
-          temp1 = i;
-          temp2 = j;
-          delProj = &temp1;
-          delAlien = &temp2;
           //delete the projectile from screen
           screen.fillRect(ps[i]->x, ps[i]->y, projectilew, projectileh, ILI9341_BLACK);
+          //delete(ps[i]);
+          for(int k = i; k < (*pind)-1; k++)
+          {
+            ps[k] = ps[k+1];
+          }
 
           //delete alien from screen
           screen.fillRect(aliens[j]->x, aliens[j]->y, 13, 8, ILI9341_BLACK);
@@ -397,6 +401,13 @@ void checkCollisions(SpaceShip * ship, Projectile ** ps, int *pind, Projectile *
           if(aliens[j]->type == 0) *score += 10;
           else if(aliens[j]->type == 1) *score += 20;
           else if(aliens[j]->type == 2) *score += 30;
+          //delete(aliens[j]);
+          for(int k = j; k < (*aliensNumber)-1; k++)
+          {
+            aliens[k] = aliens[k+1];
+          }
+          (*pind)--;                        //Forgot the paranthesis
+          (*aliensNumber)--;
           continue;
         }
       }
@@ -409,49 +420,25 @@ void checkCollisions(SpaceShip * ship, Projectile ** ps, int *pind, Projectile *
     {
       if((((aps[i]->x) + projectilew > (ship->x)) && ((ship->x) + 13 > aps[i]->x)) && (((aps[i]->y) + projectileh > ship->y) && ((ship->y) + 8 > aps[i]->y)))
       {
-        temp3 = i;
-        delAProj = &temp3;
         ship->lives--;
         printLives(ship, screen);
         if(ship->lives == 0)
         {
           *gameover = true;
           printGameOverScreen(screen);
-        } 
+          delay(2000);
+        }
+        screen.fillRect(aps[i]->x, aps[i]->y, projectilew, projectileh, ILI9341_BLACK);
+
+        //delete(aps[i]);
+        for(int j = i; j < (*apind)-1; j++)
+        {
+          aps[j] = aps[j+1];
+        }
+        (*apind)--;                       //Same
         continue;
       }
     }
-  }
-
-  if(delAlien != NULL && delProj != NULL)
-  {
-    delete(ps[*delProj]);
-    delete(aliens[*delAlien]);
-
-    for(int k = *delProj; k < *pind; k++)
-    {
-      ps[k] = ps[k+1];
-    }
-    for(int k = *delAlien; k < *aliensNumber; k++)
-    {
-      aliens[k] = aliens[k+1];
-    }
-
-    (*pind)--;                        //Forgot the paranthesis
-    (*aliensNumber)--;
-  }
-
-  if(delAProj != NULL)
-  {
-    //delete the projectile from screen
-    screen.fillRect(aps[*delAProj]->x, aps[*delAProj]->y, projectilew, projectileh, ILI9341_BLACK);
-
-    delete(aps[*delAProj]);
-    for(int i = *delAProj; i < *apind; i++)
-    {
-      aps[i] = aps[i+1];
-    }
-    (*apind)--;                       //Same
   }
       //Second check for aliens and spaceship collision
 }
@@ -490,7 +477,7 @@ void SI(Adafruit_ILI9341 screen)
   Projectile **alienProjectiles = new Projectile*[15];
   int aptrindex = 0;    //alien projectile pointer array size
 
-  int aliensNumber = 55;
+  int aliensNumber = nAliens;
   int aliensNumberRefreshing = aliensNumber;
   short originalAliensNumber = aliensNumber;
 
@@ -573,7 +560,7 @@ void SI(Adafruit_ILI9341 screen)
 
     if(debugging) printText("Vars ok", screen);
 
-    spaceShip* ship = static_cast<spaceShip*> (malloc(sizeof(spaceShip)));    //Dynamic memory allocation to learn
+    spaceShip* ship = static_cast<spaceShip*> (malloc(sizeof(spaceShip)));
     if(ship != NULL)
     {
       ship->x = 50;
@@ -614,10 +601,10 @@ void SI(Adafruit_ILI9341 screen)
       {
           if(debugging)
           {
-            printText("ShipUpdating", screen);
             screen.fillRect(0, 0, 60, 60, ILI9341_BLACK);
             screen.setTextColor(ILI9341_WHITE);
             screen.setCursor(0, 30);
+            printText("ShipUpdating", screen);
             screen.print(ship->x);
           } 
 
@@ -642,7 +629,7 @@ void SI(Adafruit_ILI9341 screen)
           projectiles[ptrindex] = p;                            //add projectile pointer to projectile pointer array
           ptrindex++;                                           //increment the arrays index/size (its more like a size)
           shootUpdate = millis();
-          if(debugging) printText("ShootUpdate", screen);
+          if(debugging) printText("ShootUpdated", screen);
         }
       }
 
@@ -650,15 +637,18 @@ void SI(Adafruit_ILI9341 screen)
       if (currentT - alienShootUpdate >= alienShootUpdateSpeed)
       {
         if(debugging) printText("AlienShootUpdating", screen);
-        Projectile* p = new projectile;                         //Same principle as for the ships projectile, except that the projectile is
-        int foobar = (int)random(aliensNumber);                 //<==shot from a random ship
-        p->x = aliens[foobar]->x + 6;
-        p->y = aliens[foobar]->y;
-        p->dy = 0;
-        p->color = ILI9341_WHITE;
-        alienProjectiles[aptrindex] = p;                        //alien and player projectiles are handled separately
-        aptrindex++;
-        alienShootUpdate = millis();
+        if(aliensNumber > 0)
+        {
+          Projectile* p = new projectile;                         //Same principle as for the ships projectile, except that the projectile is
+          int foobar = (int)random(aliensNumber);                 //<==shot from a random ship
+          p->x = aliens[foobar]->x + 6;
+          p->y = aliens[foobar]->y;
+          p->dy = 0;
+          p->color = ILI9341_WHITE;
+          alienProjectiles[aptrindex] = p;                        //alien and player projectiles are handled separately
+          aptrindex++;
+          alienShootUpdate = millis();
+        } 
         if(debugging) printText("AlienShootUpdated", screen);
       }
 
@@ -678,8 +668,7 @@ void SI(Adafruit_ILI9341 screen)
         if(debugging) printText("AlienGlobalUpdating", screen);
         alienUpdate = millis();
         moveAliens(aliens, aliensNumber, &aliensMovingRight);
-        enableBurstUpdate = true;
-        aliensNumberRefreshing = aliensNumber;
+        
         if(aliensNumber < 2 * originalAliensNumber / 3 && aliensNumber > originalAliensNumber / 3) alienUpdateTime = 750;
         else if(aliensNumber < originalAliensNumber / 3) alienUpdateTime = 500;
         if(debugging) printText("AlienGlobalUpdated", screen);
@@ -704,14 +693,27 @@ void SI(Adafruit_ILI9341 screen)
           screen.fillRect(0, 30, 10, 10, ILI9341_BLACK);
           screen.setCursor(0, 30);
           screen.print(alienBurstUpdateIndex);
-        } 
+        }
+
+        
         //if the burstUpdateIndex is the largest it can get we set it back to 0 and disable burst updating
         if(alienBurstUpdateIndex == (aliensNumberRefreshing % alienBurstUpdateFactor == 0 ? aliensNumberRefreshing / alienBurstUpdateFactor : aliensNumberRefreshing / alienBurstUpdateFactor + 1))
-        {         
-          alienBurstUpdateIndex = 0;
-          enableBurstUpdate = false;
-          alienBurstUpdate = millis();
-          aliensNumberRefreshing = aliensNumber;
+        {
+          if(aliensNumber <= alienBurstUpdateFactor)
+          {
+            drawAliens(daliens, aliens, 0, aliensNumber, 0, screen);
+            enableBurstUpdate = false;
+            alienBurstUpdate = millis();
+            alienBurstUpdateIndex = 0;
+            continue;
+          }
+          else
+          {
+            alienBurstUpdateIndex = 0;
+            enableBurstUpdate = false;
+            alienBurstUpdate = millis();
+            aliensNumberRefreshing = aliensNumber;
+          }
         }
         //else we update each part, by incrementing the index
         else
@@ -720,6 +722,8 @@ void SI(Adafruit_ILI9341 screen)
           drawAliens(daliens, aliens, aliensNumberRefreshing - (alienBurstUpdateIndex + 1) * alienBurstUpdateFactor < 0 ? 0 : aliensNumberRefreshing - (alienBurstUpdateIndex + 1) * alienBurstUpdateFactor,aliensNumberRefreshing - alienBurstUpdateIndex * alienBurstUpdateFactor, 0, screen);
           alienBurstUpdateIndex++;
         }
+
+    
         if(debugging)
         {
           printText("AlieniUpdated", screen);
@@ -730,16 +734,22 @@ void SI(Adafruit_ILI9341 screen)
       }
 
       //Check for collisions between aliens projectiles and the spaceShip
-      if(currentT - collisionUpdate >= collisionUpdateTime)
+      if(currentT - collisionUpdate >= collisionUpdateSpeed)
       {
-        if(debugging) printText("CollisionUpdating", screen);
-        checkCollisions(ship, projectiles, &ptrindex, alienProjectiles, &aptrindex, aliens, daliens, &aliensNumber, screen, false, &score, &gameover);
+        
+        checkCollisions(ship, projectiles, &ptrindex, alienProjectiles, &aptrindex, aliens, daliens, &aliensNumber, screen, debugging, &score, &gameover);
         collisionUpdate = millis();
         printLives(ship, screen);
         refreshScore(score, screen);
-        if(debugging) printText("CollisionUpdated", screen);
+        
+      }
+
+      if(aliensNumber == 0)
+      {
+        gameover = true;
       }
       
   }
   free (ship);
+
 }
